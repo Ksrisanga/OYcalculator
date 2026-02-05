@@ -4,19 +4,18 @@ from datetime import date, timedelta
 import re
 
 # ==========================================
-# 1. SECURITY SYSTEM (Login Screen)
+# 1. SECURITY SYSTEM (ORIGINAL MASTER LOGIN)
 # ==========================================
 def check_password():
     """Returns `True` if the user had the correct password."""
     def password_entered():
-        if st.session_state["password"] == "bms123": # ✨ คุณสามารถเปลี่ยนรหัสตรงนี้ได้
+        if st.session_state["password"] == "bms123":
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # ลบรหัสออกจาก memory เพื่อความปลอดภัย
+            del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        # หน้าจอ Login ครั้งแรก
         st.markdown('<div style="margin-top:15vh; text-align:center;">', unsafe_allow_html=True)
         st.title("🔒 O+Y Calculator Pro")
         st.text_input("Enter Password to Access", type="password", on_change=password_entered, key="password")
@@ -28,7 +27,7 @@ def check_password():
 
 if check_password():
     # ==========================================
-    # 2. SETUP & LUXURY BRANDING CSS
+    # 2. SETUP & NEW STYLE CONFIGURATION
     # ==========================================
     st.set_page_config(page_title="O+Y Calculator Pro", layout="wide", initial_sidebar_state="expanded")
 
@@ -42,7 +41,13 @@ if check_password():
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; background-color: {SOFT_GRAY}; }}
 
-        /* ✨ LUXURY BRANDING */
+        /* 1. HEADER ALIGNMENT: ดันเนื้อหาลงมาให้หัวข้อตรงกับ Sidebar */
+        .block-container {{
+            padding-top: 3rem !important; 
+            padding-bottom: 2rem !important;
+        }}
+
+        /* Branding Styles */
         .app-branding {{ margin-bottom: 30px; }}
         .app-title-luxury {{
             font-size: 28px; font-weight: 700;
@@ -51,45 +56,53 @@ if check_password():
             letter-spacing: -1.5px; margin-bottom: 2px;
         }}
         .app-subtitle-luxury {{ font-size: 10px; color: #86868B; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }}
-        .ind-title {{ font-size: 20px; font-weight: 700; color: {DEEP_BLUE}; margin-top: 5px; }}
+        
+        /* Indication Title Styling */
+        .ind-title {{ 
+            font-size: 20px; font-weight: 700; color: {DEEP_BLUE}; 
+            margin-top: 5px; 
+            margin-bottom: 4px;
+        }}
         .protocol-sub {{ font-size: 13px; color: #666; margin-bottom: 20px; }}
 
-        /* Phase Cards */
-        .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 25px; width: 100%; }}
+        /* 2. CARD STYLE: Left Border & Spacing */
+        .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; width: 100%; }}
         .phase-card {{
             flex: 1; min-width: 200px; background: #FFFFFF; padding: 18px;
-            border-radius: 18px; border-bottom: 4px solid #E5E5E7;
+            border-radius: 18px; 
+            border-left: 8px solid #E5E5E7; /* แถบสีด้านซ้าย */
             box-shadow: 0 4px 12px rgba(0,0,0,0.04);
         }}
-        .phase-card.p1 {{ border-bottom-color: {OPDIVO_BLUE}; }}
-        .phase-card.p2 {{ border-bottom-color: {YERVOY_ORANGE}; }}
+        .phase-card.p1 {{ border-left-color: {OPDIVO_BLUE}; }}
+        .phase-card.p2 {{ border-left-color: {YERVOY_ORANGE}; }}
         
         .card-label {{ font-size: 10px; color: #86868B; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }}
         .card-value {{ font-size: 22px; font-weight: 700; color: #1D1D1F; }}
         .card-vat {{ font-size: 11px; color: {OPDIVO_BLUE}; margin-top: 4px; }}
 
-        /* Grand Box */
+        /* 3. GRAND TOTAL: Gradient Blue -> Purple -> Orange */
         .grand-box {{
-            background: linear-gradient(135deg, {DEEP_BLUE} 0%, {OPDIVO_BLUE} 100%);
+            background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF9500 100%);
             padding: 22px; border-radius: 20px; color: #FFFFFF; 
-            margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,91,183,0.15);
+            margin-bottom: 30px; box-shadow: 0 10px 25px rgba(88, 86, 214, 0.25);
         }}
         .metric-sub {{ font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 600; }}
         .metric-main {{ font-size: 24px; font-weight: 700; margin: 2px 0; }}
         .grand-vat {{ font-size: 11px; opacity: 0.9; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }}
 
+        /* Policy Box */
         .policy-box {{
             background: #FFFFFF; padding: 20px; border-radius: 18px; 
             border-left: 6px solid {DEEP_BLUE}; margin-bottom: 50px; 
             box-shadow: 0 4px 12px rgba(0,0,0,0.03); font-size: 13px;
         }}
+        footer {{visibility: hidden;}}
         </style>
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE CALCULATION ENGINE
+    # 3. CORE LOGIC (FROM ORIGINAL MASTER)
     # ==========================================
-    # ... (ส่วน get_val, calculate_vials, run_simulation เหมือนเดิมเป๊ะ) ...
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
         s = str(val).replace(',', '').strip()
@@ -127,6 +140,8 @@ if check_password():
     def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd):
         p1_limit, p1_o_freq = int(get_val(row.get('P1_Cycle_Limit'))), max(1, int(get_val(row.get('P1_O_Freq_Weeks', 2))))
         p1_y_freq, cap_limit = max(1, int(get_val(row.get('P1_Y_Freq_Weeks', p1_o_freq)))), int(get_val(row.get('PAP_Cap_Months', 10)))
+        
+        # LOGIC CHECK PHASE 2: Check string directly
         has_p2 = pd.notna(row.get('P2_O_Dose')) and str(row.get('P2_O_Dose', '-')).strip() not in ['', '-', '0']
         
         timeline, total_paid, curr_date, cycle, weeks = [], 0.0, start_dt, 1, 1 
@@ -175,7 +190,7 @@ if check_password():
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. INTERFACE RENDER
+    # 4. RENDER UI
     # ==========================================
     @st.cache_data
     def load_data():
@@ -195,7 +210,6 @@ if check_password():
             skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
             stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
         
-        # Logout Button
         if st.button("🚪 Logout"):
             del st.session_state["password_correct"]
             st.rerun()
@@ -204,11 +218,16 @@ if check_password():
     total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
 
     st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg}</div>', unsafe_allow_html=True)
+    
+    # PHASE CARDS
     phase_html = f'<div class="card-wrapper"><div class="phase-card p1"><div class="card-label">Phase 1 / Cycle</div><div class="card-value">฿ {p1_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     if has_p2_flag or p2_c > 0:
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     st.markdown(phase_html + "</div>", unsafe_allow_html=True)
 
+    # GRAND TOTAL
     st.markdown(f'<div class="grand-box"><div style="display: flex; justify-content: space-between; align-items: flex-end;"><div><div class="metric-sub">Total Patient Pay</div><div class="metric-main">฿ {total_val:,.0f}</div><div class="grand-vat">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style="text-align: right;"><div class="metric-sub">Paid Rounds (Opdivo)</div><div class="metric-main">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
+    
+    # POLICY & TABLE
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
     st.dataframe(df_res.style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
