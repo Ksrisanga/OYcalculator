@@ -2,9 +2,11 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 import re
+import matplotlib.pyplot as plt
+import io
 
 # ==========================================
-# 1. SECURITY SYSTEM (Login Screen - ORIGINAL)
+# 1. SECURITY SYSTEM (ORIGINAL FROM Backupfinal.txt)
 # ==========================================
 def check_password():
     """Returns `True` if the user had the correct password."""
@@ -27,14 +29,14 @@ def check_password():
 
 if check_password():
     # ==========================================
-    # 2. SETUP & CSS (ปรับ Shadow + Border ให้ชัดขึ้น)
+    # 2. SETUP & CSS (ORIGINAL FROM Backupfinal.txt)
     # ==========================================
     st.set_page_config(page_title="O+Y Calculator Pro", layout="wide", initial_sidebar_state="expanded")
 
     DEEP_BLUE = "#004080"      
     OPDIVO_BLUE = "#007AFF"
     YERVOY_ORANGE = "#FF9500"
-    SOFT_GRAY = "#EFF1F5" # ✨ ปรับพื้นหลังให้เข้มขึ้นนิดนึง (จาก F8F9FA) เพื่อให้การ์ดขาวเด่นขึ้น
+    SOFT_GRAY = "#EFF1F5" 
 
     st.markdown(f"""
         <style>
@@ -46,7 +48,6 @@ if check_password():
             padding-bottom: 2rem !important;
         }}
 
-        /* Branding */
         .app-branding {{ margin-bottom: 30px; }}
         .app-title-luxury {{
             font-size: 28px; font-weight: 700;
@@ -63,17 +64,12 @@ if check_password():
         }}
         .protocol-sub {{ font-size: 13px; color: #666; margin-bottom: 20px; }}
 
-        /* ✅ 1. CARD STYLE: เพิ่ม Border และ Shadow ให้ชัด */
         .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; width: 100%; }}
         .phase-card {{
             flex: 1; min-width: 200px; background: #FFFFFF; padding: 18px;
             border-radius: 18px; 
-            
-            /* ✨ เพิ่มเส้นขอบบางๆ (Border) ช่วยตัดขอบ */
             border: 1px solid #D1D1D6; 
-            border-left-width: 8px; /* คงแถบสีด้านซ้ายไว้ */
-            
-            /* ✨ เพิ่มเงา (Shadow) ให้เข้มขึ้น */
+            border-left-width: 8px; 
             box-shadow: 0 6px 16px rgba(0,0,0,0.08); 
         }}
         .phase-card.p1 {{ border-left-color: {OPDIVO_BLUE}; }}
@@ -83,12 +79,11 @@ if check_password():
         .card-value {{ font-size: 22px; font-weight: 700; color: #1D1D1F; }}
         .card-vat {{ font-size: 11px; color: {OPDIVO_BLUE}; margin-top: 4px; }}
 
-        /* Grand Box */
         .grand-box {{
             background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF9500 100%);
             padding: 22px; border-radius: 20px; color: #FFFFFF; 
             margin-bottom: 30px; 
-            box-shadow: 0 10px 25px rgba(88, 86, 214, 0.3); /* เงาเข้มขึ้น */
+            box-shadow: 0 10px 25px rgba(88, 86, 214, 0.3); 
         }}
         .metric-sub {{ font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 600; }}
         .metric-main {{ font-size: 24px; font-weight: 700; margin: 2px 0; }}
@@ -97,7 +92,7 @@ if check_password():
         .policy-box {{
             background: #FFFFFF; padding: 20px; border-radius: 18px; 
             border-left: 6px solid {DEEP_BLUE}; margin-bottom: 50px; 
-            border: 1px solid #E5E5EA; /* เพิ่มขอบให้ Policy Box ด้วย */
+            border: 1px solid #E5E5EA;
             border-left-width: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 13px;
         }}
@@ -106,7 +101,7 @@ if check_password():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC (ORIGINAL MASTER)
+    # 3. CORE LOGIC (ORIGINAL FROM Backupfinal.txt)
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -158,6 +153,7 @@ if check_password():
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
             y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
+            
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
             y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
             o_p, y_p, status_msg = 0.0, 0.0, ""
@@ -173,12 +169,77 @@ if check_password():
             total_paid += (o_p + y_p)
             if is_p1 and p1_c == 0 and (o_p + y_p) > 0: p1_c = (o_p + y_p)
             if not is_p1 and p2_c == 0 and (o_p + y_p) > 0: p2_c = (o_p + y_p)
-            timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
+            timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "RawDate": display_date, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
             weeks, cycle, curr_date = weeks + freq, cycle + 1, curr_date + timedelta(weeks=freq)
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. RENDER
+    # 4. EXPORT LOGIC (Capped Period Only)
+    # ==========================================
+    def generate_image(ind, reg, weight, p1, p2, total, rounds, df, cap_limit):
+        # โชว์เฉพาะรอบที่ Month <= cap_limit (โชว์ทั้ง Paid และ Free)
+        df_display = df[df['Month'] <= (cap_limit + 1)].copy()
+        
+        num_rows = len(df_display) + 1
+        height = 6.0 + (num_rows * 0.55)
+        fig, ax = plt.subplots(figsize=(15, height)) 
+        ax.axis('off')
+        
+        header_text = (
+            f"O+Y Treatment Expense Summary (Capped Period)\n"
+            f"----------------------------------------------------------------------------------------------------\n"
+            f"Indication: {ind}\n"
+            f"Regimen:    {reg}\n"
+            f"Weight:     {weight} kg\n"
+            f"PAP Policy: Capped at {cap_limit} months\n\n"
+            f"Cost per Cycle (Phase 1): {p1:,.0f} THB\n"
+            f"Cost per Cycle (Phase 2): {p2:,.0f} THB\n"
+            f"----------------------------------------------------------------------------------------------------\n"
+            f"Summary - Patient Paid Rounds: {rounds:.1f} Cycles\n"
+            f"Estimated Total Investment:     {total:,.0f} THB\n"
+        )
+        
+        ax.text(0.05, 0.98, header_text, transform=ax.transAxes, fontsize=14, va='top', ha='left', family='monospace', linespacing=1.8)
+        
+        cols = ["Phase", "Cycle", "Date (DD/MM/YY)", "Month", "Opdivo Vials", "Yervoy Vials", "Opdivo (THB)", "Yervoy (THB)", "Total (THB)"]
+        table_data = [cols]
+        for _, r in df_display.iterrows():
+            short_date = r['RawDate'].strftime("%d/%m/%Y")
+            table_data.append([
+                r['Phase'], r['Cycle'], short_date, r['Month'], 
+                r['Opdivo Vials'].replace(', ', '\n'), 
+                r['Yervoy Vials'].replace(', ', '\n'),
+                f"{r['Opdivo (฿)']:,.0f}", f"{r['Yervoy (฿)']:,.0f}", f"{r['Total (฿)']:,.0f}"
+            ])
+
+        table_height = (num_rows * 0.55) / height
+        the_table = ax.table(cellText=table_data, loc='bottom', bbox=[0.02, 0.05, 0.96, table_height], cellLoc='center')
+        
+        the_table.auto_set_font_size(False)
+        the_table.set_fontsize(10)
+        the_table.scale(1, 2.0) 
+        
+        for (i, j), cell in the_table.get_celld().items():
+            cell.set_edgecolor('#DDDDDD')
+            if i == 0:
+                cell.set_facecolor('#004080')
+                cell.set_text_props(color='white', weight='bold')
+            else:
+                is_free = "Free" in str(df_display.iloc[i-1]['Status'])
+                if is_free:
+                    cell.set_facecolor('#F9F9F9')
+                    cell.set_text_props(color='#888888')
+                else:
+                    cell.set_facecolor('white' if i % 2 != 0 else '#F2F5F8')
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
+        buf.seek(0)
+        plt.close(fig)
+        return buf
+
+    # ==========================================
+    # 5. RENDER UI (ORIGINAL Backupfinal.txt)
     # ==========================================
     @st.cache_data
     def load_data():
@@ -198,8 +259,7 @@ if check_password():
             skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
             stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
         if st.button("🚪 Logout"):
-            del st.session_state["password_correct"]
-            st.rerun()
+            del st.session_state["password_correct"]; st.rerun()
 
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
     total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
@@ -212,6 +272,14 @@ if check_password():
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     st.markdown(phase_html + "</div>", unsafe_allow_html=True)
 
-    st.markdown(f'<div class="grand-box"><div style="display: flex; justify-content: space-between; align-items: flex-end;"><div><div class="metric-sub">Total Patient Pay</div><div class="metric-main">฿ {total_val:,.0f}</div><div class="grand-vat">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style="text-align: right;"><div class="metric-sub">Paid Rounds (Opdivo)</div><div class="metric-main">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class=\"grand-box\"><div style=\"display: flex; justify-content: space-between; align-items: flex-end;\"><div><div class=\"metric-sub\">Total Patient Pay</div><div class=\"metric-main\">฿ {total_val:,.0f}</div><div class=\"grand-vat\">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style=\"text-align: right;\"><div class=\"metric-sub\">Paid Rounds (Opdivo)</div><div class=\"metric-main\">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
+    
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
-    st.dataframe(df_res.style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
+    st.dataframe(df_res.drop(columns=['RawDate']).style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
+
+    # Export Button (Bottom)
+    st.markdown("---")
+    if st.button("📸 Generate Report"):
+        with st.spinner("Generating Image..."):
+            img_buf = generate_image(ind, reg, weight, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
+            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Report_{ind}.png", mime="image/png")
