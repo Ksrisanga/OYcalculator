@@ -4,14 +4,14 @@ from datetime import date, timedelta
 import re
 
 # ==========================================
-# 1. SECURITY SYSTEM (ORIGINAL MASTER LOGIN)
+# 1. SECURITY SYSTEM (Login Screen - ORIGINAL)
 # ==========================================
 def check_password():
     """Returns `True` if the user had the correct password."""
     def password_entered():
-        if st.session_state["password"] == "bms123":
+        if st.session_state["password"] == "bms123": 
             st.session_state["password_correct"] = True
-            del st.session_state["password"]
+            del st.session_state["password"] 
         else:
             st.session_state["password_correct"] = False
 
@@ -27,27 +27,26 @@ def check_password():
 
 if check_password():
     # ==========================================
-    # 2. SETUP & NEW STYLE CONFIGURATION
+    # 2. SETUP & CSS (ปรับ Shadow + Border ให้ชัดขึ้น)
     # ==========================================
     st.set_page_config(page_title="O+Y Calculator Pro", layout="wide", initial_sidebar_state="expanded")
 
     DEEP_BLUE = "#004080"      
     OPDIVO_BLUE = "#007AFF"
     YERVOY_ORANGE = "#FF9500"
-    SOFT_GRAY = "#F8F9FA"
+    SOFT_GRAY = "#EFF1F5" # ✨ ปรับพื้นหลังให้เข้มขึ้นนิดนึง (จาก F8F9FA) เพื่อให้การ์ดขาวเด่นขึ้น
 
     st.markdown(f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; background-color: {SOFT_GRAY}; }}
 
-        /* 1. HEADER ALIGNMENT: ดันเนื้อหาลงมาให้หัวข้อตรงกับ Sidebar */
         .block-container {{
             padding-top: 3rem !important; 
             padding-bottom: 2rem !important;
         }}
 
-        /* Branding Styles */
+        /* Branding */
         .app-branding {{ margin-bottom: 30px; }}
         .app-title-luxury {{
             font-size: 28px; font-weight: 700;
@@ -57,7 +56,6 @@ if check_password():
         }}
         .app-subtitle-luxury {{ font-size: 10px; color: #86868B; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }}
         
-        /* Indication Title Styling */
         .ind-title {{ 
             font-size: 20px; font-weight: 700; color: {DEEP_BLUE}; 
             margin-top: 5px; 
@@ -65,13 +63,18 @@ if check_password():
         }}
         .protocol-sub {{ font-size: 13px; color: #666; margin-bottom: 20px; }}
 
-        /* 2. CARD STYLE: Left Border & Spacing */
-        .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 25px; width: 100%; }}
+        /* ✅ 1. CARD STYLE: เพิ่ม Border และ Shadow ให้ชัด */
+        .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; width: 100%; }}
         .phase-card {{
             flex: 1; min-width: 200px; background: #FFFFFF; padding: 18px;
             border-radius: 18px; 
-            border-left: 8px solid #E5E5E7; /* แถบสีด้านซ้าย */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            
+            /* ✨ เพิ่มเส้นขอบบางๆ (Border) ช่วยตัดขอบ */
+            border: 1px solid #D1D1D6; 
+            border-left-width: 8px; /* คงแถบสีด้านซ้ายไว้ */
+            
+            /* ✨ เพิ่มเงา (Shadow) ให้เข้มขึ้น */
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08); 
         }}
         .phase-card.p1 {{ border-left-color: {OPDIVO_BLUE}; }}
         .phase-card.p2 {{ border-left-color: {YERVOY_ORANGE}; }}
@@ -80,28 +83,30 @@ if check_password():
         .card-value {{ font-size: 22px; font-weight: 700; color: #1D1D1F; }}
         .card-vat {{ font-size: 11px; color: {OPDIVO_BLUE}; margin-top: 4px; }}
 
-        /* 3. GRAND TOTAL: Gradient Blue -> Purple -> Orange */
+        /* Grand Box */
         .grand-box {{
             background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF9500 100%);
             padding: 22px; border-radius: 20px; color: #FFFFFF; 
-            margin-bottom: 30px; box-shadow: 0 10px 25px rgba(88, 86, 214, 0.25);
+            margin-bottom: 30px; 
+            box-shadow: 0 10px 25px rgba(88, 86, 214, 0.3); /* เงาเข้มขึ้น */
         }}
         .metric-sub {{ font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 600; }}
         .metric-main {{ font-size: 24px; font-weight: 700; margin: 2px 0; }}
         .grand-vat {{ font-size: 11px; opacity: 0.9; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }}
 
-        /* Policy Box */
         .policy-box {{
             background: #FFFFFF; padding: 20px; border-radius: 18px; 
             border-left: 6px solid {DEEP_BLUE}; margin-bottom: 50px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.03); font-size: 13px;
+            border: 1px solid #E5E5EA; /* เพิ่มขอบให้ Policy Box ด้วย */
+            border-left-width: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 13px;
         }}
         footer {{visibility: hidden;}}
         </style>
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC (FROM ORIGINAL MASTER)
+    # 3. CORE LOGIC (ORIGINAL MASTER)
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -117,7 +122,6 @@ if check_password():
             for s in [40, 100, 120]:
                 if s in available_stock: options.append((s, prices[f'O_{s}'] * multiplier))
         else: options.append((50, prices['Y_50'] * multiplier))
-        
         memo = {}
         def solve(rem_mg):
             if rem_mg <= 0: return 0, {}, 0
@@ -132,7 +136,6 @@ if check_password():
                     best_combo[size] = best_combo.get(size, 0) + 1
             memo[rem_mg] = (best_cost, best_combo, min_vials)
             return best_cost, best_combo, min_vials
-        
         cost, combo, _ = solve(mg_needed)
         details = [f"{s}mg x {count}" for s, count in sorted(combo.items(), reverse=True)]
         return cost, ", ".join(details)
@@ -140,8 +143,6 @@ if check_password():
     def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd):
         p1_limit, p1_o_freq = int(get_val(row.get('P1_Cycle_Limit'))), max(1, int(get_val(row.get('P1_O_Freq_Weeks', 2))))
         p1_y_freq, cap_limit = max(1, int(get_val(row.get('P1_Y_Freq_Weeks', p1_o_freq)))), int(get_val(row.get('PAP_Cap_Months', 10)))
-        
-        # LOGIC CHECK PHASE 2: Check string directly
         has_p2 = pd.notna(row.get('P2_O_Dose')) and str(row.get('P2_O_Dose', '-')).strip() not in ['', '-', '0']
         
         timeline, total_paid, curr_date, cycle, weeks = [], 0.0, start_dt, 1, 1 
@@ -150,47 +151,34 @@ if check_password():
         while weeks <= 104:
             is_p1 = (cycle <= p1_limit)
             if not is_p1 and not has_p2: break
-            
             display_date = curr_date
             if skip_wknd:
                 if display_date.weekday() == 5: display_date += timedelta(days=2)
                 elif display_date.weekday() == 6: display_date += timedelta(days=1)
-
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
             y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
-            
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
             y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
             o_p, y_p, status_msg = 0.0, 0.0, ""
-
             if o_mg > 0 and curr_m <= cap_limit:
                 o_admin_total += 1
                 if o_admin_total % 2 != 0:
                     o_p, status_msg = (o_cost, "") if (((weeks + freq - 1) // 4) + 1) <= cap_limit else (o_cost * 0.5, " (Pay 50%)")
                     o_paid_accum += (1.0 if "50%" not in status_msg else 0.5)
-            
             if y_mg > 0 and curr_m <= cap_limit:
                 y_admin_total += 1
                 if y_admin_total % 2 != 0:
                     y_p = y_cost if (((weeks + p1_y_freq - 1) // 4) + 1) <= cap_limit else y_cost * 0.5
-
             total_paid += (o_p + y_p)
             if is_p1 and p1_c == 0 and (o_p + y_p) > 0: p1_c = (o_p + y_p)
             if not is_p1 and p2_c == 0 and (o_p + y_p) > 0: p2_c = (o_p + y_p)
-            
-            timeline.append({
-                "Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "Date": display_date.strftime("%d %b %Y (%a)"),
-                "Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", 
-                "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), 
-                "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"
-            })
+            timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
             weeks, cycle, curr_date = weeks + freq, cycle + 1, curr_date + timedelta(weeks=freq)
-        
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. RENDER UI
+    # 4. RENDER
     # ==========================================
     @st.cache_data
     def load_data():
@@ -209,7 +197,6 @@ if check_password():
             start_dt = st.date_input("First Dose Date", date.today())
             skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
             stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
-        
         if st.button("🚪 Logout"):
             del st.session_state["password_correct"]
             st.rerun()
@@ -219,15 +206,12 @@ if check_password():
 
     st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg}</div>', unsafe_allow_html=True)
     
-    # PHASE CARDS
+    # Phase Cards
     phase_html = f'<div class="card-wrapper"><div class="phase-card p1"><div class="card-label">Phase 1 / Cycle</div><div class="card-value">฿ {p1_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     if has_p2_flag or p2_c > 0:
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     st.markdown(phase_html + "</div>", unsafe_allow_html=True)
 
-    # GRAND TOTAL
     st.markdown(f'<div class="grand-box"><div style="display: flex; justify-content: space-between; align-items: flex-end;"><div><div class="metric-sub">Total Patient Pay</div><div class="metric-main">฿ {total_val:,.0f}</div><div class="grand-vat">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style="text-align: right;"><div class="metric-sub">Paid Rounds (Opdivo)</div><div class="metric-main">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
-    
-    # POLICY & TABLE
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
     st.dataframe(df_res.style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
