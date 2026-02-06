@@ -174,32 +174,33 @@ if check_password():
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. EXPORT LOGIC (Capped Period Only)
+    # 4. EXPORT LOGIC (NEW: Smaller Header + Markup)
     # ==========================================
-    def generate_image(ind, reg, weight, p1, p2, total, rounds, df, cap_limit):
-        # โชว์เฉพาะรอบที่ Month <= cap_limit (โชว์ทั้ง Paid และ Free)
+    def generate_image(ind, reg, weight, markup, p1, p2, total, rounds, df, cap_limit):
+        # โชว์เฉพาะช่วง Capped Period (Month <= cap_limit + 1)
         df_display = df[df['Month'] <= (cap_limit + 1)].copy()
         
         num_rows = len(df_display) + 1
-        height = 6.0 + (num_rows * 0.55)
+        height = 5.0 + (num_rows * 0.5)
         fig, ax = plt.subplots(figsize=(15, height)) 
         ax.axis('off')
         
+        # ✅ ปรับแต่ง Header: ตัวเล็กลง (fontsize=11) และกระชับขึ้น (linespacing=1.4)
         header_text = (
-            f"O+Y Treatment Expense Summary (Capped Period)\n"
+            f"O+Y Treatment Expense Summary\n"
             f"----------------------------------------------------------------------------------------------------\n"
             f"Indication: {ind}\n"
             f"Regimen:    {reg}\n"
-            f"Weight:     {weight} kg\n"
+            f"Weight:     {weight} kg  |  Hospital Markup: {markup}%\n"
             f"PAP Policy: Capped at {cap_limit} months\n\n"
             f"Cost per Cycle (Phase 1): {p1:,.0f} THB\n"
             f"Cost per Cycle (Phase 2): {p2:,.0f} THB\n"
             f"----------------------------------------------------------------------------------------------------\n"
             f"Summary - Patient Paid Rounds: {rounds:.1f} Cycles\n"
-            f"Estimated Total Investment:     {total:,.0f} THB\n"
+            f"Estimated Total Paid:     {total:,.0f} THB\n"
         )
         
-        ax.text(0.05, 0.98, header_text, transform=ax.transAxes, fontsize=14, va='top', ha='left', family='monospace', linespacing=1.8)
+        ax.text(0.05, 0.98, header_text, transform=ax.transAxes, fontsize=11, va='top', ha='left', family='monospace', linespacing=1.4)
         
         cols = ["Phase", "Cycle", "Date (DD/MM/YY)", "Month", "Opdivo Vials", "Yervoy Vials", "Opdivo (THB)", "Yervoy (THB)", "Total (THB)"]
         table_data = [cols]
@@ -212,7 +213,7 @@ if check_password():
                 f"{r['Opdivo (฿)']:,.0f}", f"{r['Yervoy (฿)']:,.0f}", f"{r['Total (฿)']:,.0f}"
             ])
 
-        table_height = (num_rows * 0.55) / height
+        table_height = (num_rows * 0.5) / height
         the_table = ax.table(cellText=table_data, loc='bottom', bbox=[0.02, 0.05, 0.96, table_height], cellLoc='center')
         
         the_table.auto_set_font_size(False)
@@ -239,7 +240,7 @@ if check_password():
         return buf
 
     # ==========================================
-    # 5. RENDER UI (ORIGINAL Backupfinal.txt)
+    # 5. RENDER UI (ORIGINAL FROM Backupfinal.txt)
     # ==========================================
     @st.cache_data
     def load_data():
@@ -272,14 +273,14 @@ if check_password():
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     st.markdown(phase_html + "</div>", unsafe_allow_html=True)
 
-    st.markdown(f'<div class=\"grand-box\"><div style=\"display: flex; justify-content: space-between; align-items: flex-end;\"><div><div class=\"metric-sub\">Total Patient Pay</div><div class=\"metric-main\">฿ {total_val:,.0f}</div><div class=\"grand-vat\">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style=\"text-align: right;\"><div class=\"metric-sub\">Paid Rounds (Opdivo)</div><div class=\"metric-main\">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="grand-box"><div style="display: flex; justify-content: space-between; align-items: flex-end;"><div><div class="metric-sub">Total Patient Pay</div><div class="metric-main">฿ {total_val:,.0f}</div><div class="grand-vat">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style="text-align: right;"><div class="metric-sub">Paid Rounds (Opdivo)</div><div class="metric-main">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
     
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
     st.dataframe(df_res.drop(columns=['RawDate']).style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
 
-    # Export Button (Bottom)
+    # 📥 ปุ่ม Export ด้านล่างสุด
     st.markdown("---")
     if st.button("📸 Generate Report"):
         with st.spinner("Generating Image..."):
-            img_buf = generate_image(ind, reg, weight, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
-            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Report_{ind}.png", mime="image/png")
+            img_buf = generate_image(ind, reg, weight, markup, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
+            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{ind}.png", mime="image/png")
