@@ -112,7 +112,7 @@ if check_password():
     def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
         if mg_needed <= 0: return 0.0, "-"
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
-        options = [
+        options = []
         if drug_type == 'O':
             for s in [40, 100, 120]:
                 if s in available_stock: options.append((s, prices[f'O_{s}'] * multiplier))
@@ -284,4 +284,5 @@ if check_password():
         with st.spinner("Generating Image..."):
             img_buf = generate_image(ind, reg, weight, markup, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
             st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{ind}.png", mime="image/png")
+
 
