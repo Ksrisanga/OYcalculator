@@ -4,12 +4,12 @@ from datetime import date, timedelta
 import re
 import matplotlib.pyplot as plt
 import io
+from streamlit_option_menu import option_menu 
 
 # ==========================================
-# 1. SECURITY SYSTEM (ORIGINAL FROM Backupfinal.txt)
+# 1. SECURITY SYSTEM (ORIGINAL)
 # ==========================================
 def check_password():
-    """Returns `True` if the user had the correct password."""
     def password_entered():
         if st.session_state["password"] == "bms123": 
             st.session_state["password_correct"] = True
@@ -29,25 +29,17 @@ def check_password():
 
 if check_password():
     # ==========================================
-    # 2. SETUP & CSS (ORIGINAL FROM Backupfinal.txt)
+    # 2. SETUP & CSS (Vertical Balanced Tab)
     # ==========================================
     st.set_page_config(page_title="O+Y Calculator Pro", layout="wide", initial_sidebar_state="expanded")
-
-    DEEP_BLUE = "#004080"      
-    OPDIVO_BLUE = "#007AFF"
-    YERVOY_ORANGE = "#FF9500"
-    SOFT_GRAY = "#EFF1F5" 
+    DEEP_BLUE, OPDIVO_BLUE, YERVOY_ORANGE, SOFT_GRAY = "#004080", "#007AFF", "#FF9500", "#EFF1F5"
 
     st.markdown(f"""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; background-color: {SOFT_GRAY}; }}
-
-        .block-container {{
-            padding-top: 3rem !important; 
-            padding-bottom: 2rem !important;
-        }}
-
+        .block-container {{ padding-top: 3rem !important; padding-bottom: 2rem !important; }}
+        
         .app-branding {{ margin-bottom: 30px; }}
         .app-title-luxury {{
             font-size: 28px; font-weight: 700;
@@ -57,43 +49,39 @@ if check_password():
         }}
         .app-subtitle-luxury {{ font-size: 10px; color: #86868B; text-transform: uppercase; letter-spacing: 2px; font-weight: 600; }}
         
-        .ind-title {{ 
-            font-size: 20px; font-weight: 700; color: {DEEP_BLUE}; 
-            margin-top: 5px; 
-            margin-bottom: 4px;
-        }}
+        .ind-title {{ font-size: 20px; font-weight: 700; color: {DEEP_BLUE}; margin-top: 5px; margin-bottom: 4px; }}
         .protocol-sub {{ font-size: 13px; color: #666; margin-bottom: 20px; }}
-
+        
+        /* 🟢 บังคับให้ปุ่มกว้างเท่ากัน 50% และเรียงแนวตั้ง (Icon บน Text ล่าง) */
+        iframe[title="streamlit_option_menu.option_menu"] {{
+            width: 100% !important;
+        }}
+        
+        /* Style ส่วนอื่นๆ คงเดิมจาก Final_Version_Full.txt */
         .card-wrapper {{ display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; width: 100%; }}
         .phase-card {{
             flex: 1; min-width: 200px; background: #FFFFFF; padding: 18px;
-            border-radius: 18px; 
-            border: 1px solid #D1D1D6; 
-            border-left-width: 8px; 
+            border-radius: 18px; border: 1px solid #D1D1D6; border-left-width: 8px;
             box-shadow: 0 6px 16px rgba(0,0,0,0.08); 
         }}
         .phase-card.p1 {{ border-left-color: {OPDIVO_BLUE}; }}
         .phase-card.p2 {{ border-left-color: {YERVOY_ORANGE}; }}
-        
         .card-label {{ font-size: 10px; color: #86868B; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }}
         .card-value {{ font-size: 22px; font-weight: 700; color: #1D1D1F; }}
         .card-vat {{ font-size: 11px; color: {OPDIVO_BLUE}; margin-top: 4px; }}
-
+        
         .grand-box {{
             background: linear-gradient(90deg, #007AFF 0%, #5856D6 50%, #FF9500 100%);
-            padding: 22px; border-radius: 20px; color: #FFFFFF; 
-            margin-bottom: 30px; 
+            padding: 22px; border-radius: 20px; color: #FFFFFF; margin-bottom: 30px; 
             box-shadow: 0 10px 25px rgba(88, 86, 214, 0.3); 
         }}
         .metric-sub {{ font-size: 10px; opacity: 0.85; text-transform: uppercase; font-weight: 600; }}
         .metric-main {{ font-size: 24px; font-weight: 700; margin: 2px 0; }}
         .grand-vat {{ font-size: 11px; opacity: 0.9; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; }}
-
+        
         .policy-box {{
-            background: #FFFFFF; padding: 20px; border-radius: 18px; 
-            border-left: 6px solid {DEEP_BLUE}; margin-bottom: 50px; 
-            border: 1px solid #E5E5EA;
-            border-left-width: 6px;
+            background: #FFFFFF; padding: 20px; border-radius: 18px; border-left: 6px solid {DEEP_BLUE}; 
+            margin-bottom: 50px; border: 1px solid #E5E5EA; border-left-width: 6px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 13px;
         }}
         footer {{visibility: hidden;}}
@@ -101,7 +89,7 @@ if check_password():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC (ORIGINAL FROM Backupfinal.txt)
+    # 3. CORE LOGIC (ORIGINAL FROM Final_Version_Full.txt)
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -111,7 +99,7 @@ if check_password():
 
     def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
         if mg_needed <= 0: return 0.0, "-"
-        prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
+        prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 60348}
         options = []
         if drug_type == 'O':
             for s in [40, 100, 120]:
@@ -174,21 +162,20 @@ if check_password():
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. EXPORT LOGIC (NEW: Smaller Header + Markup)
+    # 4. EXPORT FUNCTION (UPDATED)
     # ==========================================
-    def generate_image(ind, reg, weight, markup, p1, p2, total, rounds, df, cap_limit):
-        # โชว์เฉพาะช่วง Capped Period (Month <= cap_limit + 1)
+    def generate_image(ind, reg, weight, markup, p1, p2, total, rounds, df, cap_limit, sector): # 🟢 รับค่า sector เพิ่ม
         df_display = df[df['Month'] <= (cap_limit + 1)].copy()
-        
         num_rows = len(df_display) + 1
         height = 5.0 + (num_rows * 0.5)
         fig, ax = plt.subplots(figsize=(15, height)) 
         ax.axis('off')
         
-        # ✅ ปรับแต่ง Header: ตัวเล็กลง (fontsize=11) และกระชับขึ้น (linespacing=1.4)
+        # 🟢 เพิ่มบรรทัด Sector: {sector} เข้าไปใน Header
         header_text = (
             f"O+Y Treatment Expense Summary\n"
             f"----------------------------------------------------------------------------------------------------\n"
+            f"Sector:     {sector}\n"  
             f"Indication: {ind}\n"
             f"Regimen:    {reg}\n"
             f"Weight:     {weight} kg  |  Hospital Markup: {markup}%\n"
@@ -197,7 +184,7 @@ if check_password():
             f"Cost per Cycle (Phase 2): {p2:,.0f} THB\n"
             f"----------------------------------------------------------------------------------------------------\n"
             f"Summary - Patient Paid Rounds: {rounds:.1f} Cycles\n"
-            f"Estimated Total Paid:     {total:,.0f} THB\n"
+            f"Estimated Total Investment:     {total:,.0f} THB\n"
         )
         
         ax.text(0.05, 0.98, header_text, transform=ax.transAxes, fontsize=11, va='top', ha='left', family='monospace', linespacing=1.4)
@@ -240,34 +227,76 @@ if check_password():
         return buf
 
     # ==========================================
-    # 5. RENDER UI (ORIGINAL FROM Backupfinal.txt)
+    # 5. RENDER UI (UPDATED SIDEBAR)
     # ==========================================
     @st.cache_data
-    def load_data():
-        return pd.read_csv("https://docs.google.com/spreadsheets/d/1YXD44pN5mLwazxOiXCHHcylvB082jdtNivXX4VpXdJM/export?format=csv")
+    def load_data(tab_name):
+        sheet_id = "1YXD44pN5mLwazxOiXCHHcylvB082jdtNivXX4VpXdJM"
+        url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={tab_name}"
+        return pd.read_csv(url)
 
-    df = load_data()
     with st.sidebar:
         st.markdown('<div class="app-branding"><div class="app-title-luxury">O+Y Calculator</div><div class="app-subtitle-luxury">Precision PAP Support</div></div>', unsafe_allow_html=True)
-        weight = st.number_input("Patient Weight (kg)", 1.0, 150.0, 60.0, step=0.5)
-        ind = st.selectbox("Select Indication", df['Indication_Group'].dropna().unique())
-        subset = df[df['Indication_Group'] == ind]
-        reg = st.radio("Protocol", subset['Regimen_Name'])
-        markup = st.slider("Hospital Markup (%)", 0, 50, 0)
-        st.markdown("---")
-        with st.expander("🛠️ Advanced Settings"):
-            start_dt = st.date_input("First Dose Date", date.today())
-            skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
-            stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
-        if st.button("🚪 Logout"):
-            del st.session_state["password_correct"]; st.rerun()
+        
+        # 🏥 SLIDING TAB SELECTION (FIXED LAYOUT)
+        sector = option_menu(
+            menu_title=None, 
+            options=["Government", "Private"], 
+            icons=["bank", "building"], 
+            default_index=0, 
+            orientation="horizontal",
+            manual_select=False, # ป้องกันการเลือกซ้ำ
+            styles={
+                "container": {
+                    "padding": "0!important", 
+                    "background-color": "#FFFFFF", 
+                    "border": "1px solid #E5E5EA", 
+                    "border-radius": "12px", 
+                    "margin-bottom": "25px",
+                    "display": "grid",             # ใช้ Grid Layout
+                    "grid-template-columns": "1fr 1fr" # แบ่งเป็น 2 คอลัมน์เท่ากันเป๊ะ (50% - 50%)
+                },
+                "icon": {"color": "#FF9500", "font-size": "18px"}, 
+                "nav-link": {
+                    "font-size": "13px", 
+                    "font-weight": "500", 
+                    "margin":"0px", 
+                    "padding": "10px",
+                    "text-align": "center",
+                    "display": "flex",
+                    "flex-direction": "column", # Icon บน Text ล่าง
+                    "align-items": "center",
+                    "justify-content": "center",
+                    "height": "100%"
+                },
+                "nav-link-selected": {
+                    "background-color": "#004080", 
+                    "color": "white", 
+                    "font-weight": "600"
+                },
+            }
+        )
+
+        df = load_data(sector)
+        with st.sidebar:
+            weight = st.number_input("Patient Weight (kg)", 1.0, 150.0, 60.0, step=0.5)
+            ind = st.selectbox("Select Indication", df['Indication_Group'].dropna().unique())
+            subset = df[df['Indication_Group'] == ind]
+            reg = st.radio("Protocol", subset['Regimen_Name'])
+            markup = st.slider("Hospital Markup (%)", 0, 50, 0)
+            st.markdown("---")
+            with st.expander("🛠️ Advanced Settings"):
+                start_dt = st.date_input("First Dose Date", date.today())
+                skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
+                stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
+            if st.button("🚪 Logout"):
+                del st.session_state["password_correct"]; st.rerun()
 
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
     total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
 
-    st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg} | Sector: {sector}</div>', unsafe_allow_html=True)
     
-    # Phase Cards
     phase_html = f'<div class="card-wrapper"><div class="phase-card p1"><div class="card-label">Phase 1 / Cycle</div><div class="card-value">฿ {p1_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     if has_p2_flag or p2_c > 0:
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
@@ -278,11 +307,9 @@ if check_password():
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
     st.dataframe(df_res.drop(columns=['RawDate']).style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
 
-    # 📥 ปุ่ม Export ด้านล่างสุด
+    # 📥 ปุ่ม Export ด้านล่างสุด (พร้อมส่งค่า Sector เข้าไป)
     st.markdown("---")
-    if st.button("📸 Generate Report"):
+    if st.button("📸 Generate Plan Image"):
         with st.spinner("Generating Image..."):
-            img_buf = generate_image(ind, reg, weight, markup, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
-            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{ind}.png", mime="image/png")
-
-
+            img_buf = generate_image(ind, reg, weight, markup, p1_c, p2_c, total_val, o_rounds, df_res, cap_val, sector) # ส่ง sector เข้าไป
+            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
