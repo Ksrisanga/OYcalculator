@@ -4,10 +4,11 @@ from datetime import date, timedelta
 import re
 import matplotlib.pyplot as plt
 import io
+# 🟢 ต้องลง pip install streamlit-option-menu ก่อนนะครับ
 from streamlit_option_menu import option_menu 
 
 # ==========================================
-# 1. SECURITY SYSTEM (ORIGINAL)
+# 1. SECURITY SYSTEM
 # ==========================================
 def check_password():
     def password_entered():
@@ -109,7 +110,7 @@ if check_password():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC (EXACTLY AS MASTER)
+    # 3. CORE LOGIC
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -119,6 +120,7 @@ if check_password():
 
     def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
         if mg_needed <= 0: return 0.0, "-"
+        # 🟢 UPDATED PRICE: Yervoy 50mg = 63,558 THB
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
         options = []
         if drug_type == 'O':
@@ -161,6 +163,7 @@ if check_password():
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
             y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
+            
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
             y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
             o_p, y_p, status_msg = 0.0, 0.0, ""
@@ -178,10 +181,12 @@ if check_password():
             if not is_p1 and p2_c == 0 and (o_p + y_p) > 0: p2_c = (o_p + y_p)
             timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "RawDate": display_date, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
             weeks, cycle, curr_date = weeks + freq, cycle + 1, curr_date + timedelta(weeks=freq)
+        
+        # 🟢 FIXED: Return o_paid_accum (Fixing the NameError)
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
-    # 4. EXPORT FUNCTION (UPDATED HEADER)
+    # 4. EXPORT FUNCTION
     # ==========================================
     def generate_image(ind, reg, weight, markup, sector, p1, p2, total, rounds, df, cap_limit):
         df_display = df[df['Month'] <= (cap_limit + 1)].copy()
@@ -243,7 +248,7 @@ if check_password():
     with st.sidebar:
         st.markdown('<div class="app-branding"><div class="app-title-luxury">O+Y Calculator</div><div class="app-subtitle-luxury">Precision PAP Support</div></div>', unsafe_allow_html=True)
         
-        # 🟢 SIDEBAR: Fixed Grid Layout
+        # 🟢 RESTORED OPTION MENU (As requested)
         sector = option_menu(
             menu_title=None, 
             options=["Government", "Private"], 
@@ -291,8 +296,9 @@ if check_password():
             
             for _, other_row in other_regimens.iterrows():
                 other_name = other_row['Regimen_Name']
-                # เรียกใช้ run_simulation ตัวเดิมเป๊ะๆ แต่ไม่เอาค่า return ที่ไม่จำเป็น
-                other_total, _, _, _, _, _, _ = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
+                # เรียกใช้ run_simulation ตัวเดิมเป๊ะๆ
+                other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
+                other_total = other_res[0] # เอาแค่ค่า Total มาเทียบ
                 
                 diff = other_total - total_val
                 diff_text = f"+฿ {diff:,.0f}" if diff > 0 else f"-฿ {abs(diff):,.0f}"
@@ -318,3 +324,41 @@ if check_password():
         with st.spinner("Generating Image..."):
             img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
             st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
+
+    # 🟢 🆕 SMART TEXT FOR LINE (NEW ADDITION)
+    st.markdown("---")
+    st.subheader("💬 Smart Copy for LINE")
+    
+    # คำนวณค่าตัวแปรสำหรับข้อความ
+    p1_o_dose_raw = str(sel_row.get('P1_O_Dose'))
+    p1_o_mg = get_val(p1_o_dose_raw) * (weight if 'mg/kg' in p1_o_dose_raw.lower() else 1)
+    _, p1_o_vials_txt = calculate_vials(p1_o_mg, 'O', stock, (1 + markup/100))
+    
+    p1_y_dose_raw = str(sel_row.get('P1_Y_Dose', '0'))
+    p1_y_mg = get_val(p1_y_dose_raw) * (weight if 'mg/kg' in p1_y_dose_raw.lower() else 1)
+    _, p1_y_vials_txt = calculate_vials(p1_y_mg, 'Y', [50], (1 + markup/100))
+    
+    freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
+    
+    # ข้อความสรุป
+    copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind} 
+
+👤 น้ำหนัก: {weight} kg
+โรค: {ind}
+สูตรยา: {reg}
+
+📅 รอบการให้ยา (Cycle): ทุกๆ {freq_weeks} สัปดาห์
+
+💉 ขนาดยาที่ใช้ (Phase 1):
+- Opdivo: {p1_o_mg:.0f} mg ({p1_o_vials_txt})
+- Yervoy: {p1_y_mg:.0f} mg ({p1_y_vials_txt})
+
+💰 สรุปค่าใช้จ่าย:
+- Phase 1 (O+Y): ฿{p1_c:,.0f} / รอบ
+- Phase 2 (O only): ฿{p2_c:,.0f} / รอบ
+- ราคารวมทั้งคอร์ส (ประมาณ): ฿{total_val:,.0f}
+
+✅ สิทธิประโยชน์ PAP:
+ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี) ครับ"""
+
+    st.code(copy_text, language="text")
