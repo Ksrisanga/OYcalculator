@@ -1,6 +1,7 @@
 streamlit
 pandas
 st-gsheets-connection
-
+streamlit-option-menu
 Pillow
 matplotlib
+
