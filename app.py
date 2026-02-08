@@ -4,8 +4,6 @@ from datetime import date, timedelta
 import re
 import matplotlib.pyplot as plt
 import io
-# 🟢 ต้องลง pip install streamlit-option-menu ก่อนนะครับ
-from streamlit_option_menu import option_menu 
 
 # ==========================================
 # 1. SECURITY SYSTEM
@@ -91,10 +89,8 @@ if check_password():
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 13px;
         }}
 
-        /* 🟢 CSS FIX: Force Option Menu to be Symmetrical & Vertical Stack */
         iframe[title="streamlit_option_menu.option_menu"] {{ width: 100% !important; }}
         
-        /* 🟢 CSS for Comparison Box */
         .comp-container {{
             background-color: #FFFFFF; border: 1px solid #E5E5EA; border-radius: 12px; 
             padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
@@ -102,8 +98,8 @@ if check_password():
         .comp-title {{ font-size: 14px; font-weight: 600; color: #333; }}
         .comp-val {{ font-size: 14px; font-weight: 700; color: #004080; }}
         .comp-diff {{ font-size: 12px; font-weight: 500; }}
-        .diff-pos {{ color: #28a745; }} /* Green */
-        .diff-neg {{ color: #dc3545; }} /* Red */
+        .diff-pos {{ color: #28a745; }} 
+        .diff-neg {{ color: #dc3545; }} 
 
         footer {{visibility: hidden;}}
         </style>
@@ -120,7 +116,7 @@ if check_password():
 
     def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
         if mg_needed <= 0: return 0.0, "-"
-        # 🟢 UPDATED PRICE: Yervoy 50mg = 63,558 THB
+        # 🟢 PRICE UPDATED: Yervoy 50mg = 63,558 THB
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
         options = []
         if drug_type == 'O':
@@ -163,7 +159,6 @@ if check_password():
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
             y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
-            
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
             y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
             o_p, y_p, status_msg = 0.0, 0.0, ""
@@ -182,7 +177,6 @@ if check_password():
             timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "RawDate": display_date, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
             weeks, cycle, curr_date = weeks + freq, cycle + 1, curr_date + timedelta(weeks=freq)
         
-        # 🟢 FIXED: Return o_paid_accum (Fixing the NameError)
         return total_paid, o_paid_accum, p1_c, p2_c, pd.DataFrame(timeline), cap_limit, has_p2
 
     # ==========================================
@@ -195,7 +189,7 @@ if check_password():
         fig, ax = plt.subplots(figsize=(15, height)) 
         ax.axis('off')
         
-        # 🟢 Header include Sector
+        # Header include Sector
         header_text = (
             f"O+Y Treatment Expense Summary | Sector: {sector}\n"
             f"----------------------------------------------------------------------------------------------------\n"
@@ -248,21 +242,26 @@ if check_password():
     with st.sidebar:
         st.markdown('<div class="app-branding"><div class="app-title-luxury">O+Y Calculator</div><div class="app-subtitle-luxury">Precision PAP Support</div></div>', unsafe_allow_html=True)
         
-        # 🟢 RESTORED OPTION MENU (As requested)
-        sector = option_menu(
-            menu_title=None, 
-            options=["Government", "Private"], 
-            icons=["bank", "building"], 
-            default_index=0, 
-            orientation="horizontal",
-            manual_select=False,
-            styles={
-                "container": { "padding": "0!important", "background-color": "#FFFFFF", "border": "1px solid #E5E5EA", "border-radius": "12px", "margin-bottom": "25px", "display": "grid", "grid-template-columns": "1fr 1fr" },
-                "icon": {"color": "#FF9500", "font-size": "18px"}, 
-                "nav-link": { "font-size": "13px", "font-weight": "500", "margin":"0px", "padding": "10px", "text-align": "center", "display": "flex", "flex-direction": "column", "align-items": "center", "justify-content": "center", "height": "100%" },
-                "nav-link-selected": { "background-color": "#004080", "color": "white", "font-weight": "600" },
-            }
-        )
+        # 🔵 Try-Except for Option Menu (Fallback system)
+        try:
+            from streamlit_option_menu import option_menu
+            sector = option_menu(
+                menu_title=None, 
+                options=["Government", "Private"], 
+                icons=["bank", "building"], 
+                default_index=0, 
+                orientation="horizontal",
+                manual_select=False,
+                styles={
+                    "container": { "padding": "0!important", "background-color": "#FFFFFF", "border": "1px solid #E5E5EA", "border-radius": "12px", "margin-bottom": "25px", "display": "grid", "grid-template-columns": "1fr 1fr" },
+                    "icon": {"color": "#FF9500", "font-size": "18px"}, 
+                    "nav-link": { "font-size": "13px", "font-weight": "500", "margin":"0px", "padding": "10px", "text-align": "center", "display": "flex", "flex-direction": "column", "align-items": "center", "justify-content": "center", "height": "100%" },
+                    "nav-link-selected": { "background-color": "#004080", "color": "white", "font-weight": "600" },
+                }
+            )
+        except ImportError:
+            st.warning("⚠️ Module 'streamlit-option-menu' not found. Using standard buttons.")
+            sector = st.radio("Select Sector", ["Government", "Private"], horizontal=True)
         
         df = load_data(sector)
         weight = st.number_input("Patient Weight (kg)", 1.0, 150.0, 60.0, step=0.5)
@@ -270,6 +269,12 @@ if check_password():
         subset = df[df['Indication_Group'] == ind]
         reg = st.radio("Protocol", subset['Regimen_Name'])
         markup = st.slider("Hospital Markup (%)", 0, 100, 0)
+        
+        # 🟢 NEW: MARKUP PREVIEW (Opdivo 100mg Reference)
+        base_price = 58850 # Opdivo 100mg Base
+        marked_price = base_price * (1 + markup/100)
+        st.caption(f"💡 Ref (O_100): ฿{base_price:,.0f} ➡️ **฿{marked_price:,.0f}**")
+        
         st.markdown("---")
         with st.expander("🛠️ Advanced Settings"):
             start_dt = st.date_input("First Dose Date", date.today())
@@ -288,32 +293,20 @@ if check_password():
         phase_html += f'<div class="phase-card p2"><div class="card-label">Phase 2 / Cycle</div><div class="card-value">฿ {p2_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
     st.markdown(phase_html + "</div>", unsafe_allow_html=True)
 
-    # 🟢 AUTO-COMPARE (Logic ที่ไม่แก้ run_simulation เดิม)
+    # 🟢 AUTO-COMPARE
     other_regimens = subset[subset['Regimen_Name'] != reg]
     if not other_regimens.empty:
         with st.expander(f"⚖️ Compare with other {ind} protocols", expanded=False):
             st.markdown(f"**Comparing with current selection ({reg}):**")
-            
             for _, other_row in other_regimens.iterrows():
                 other_name = other_row['Regimen_Name']
-                # เรียกใช้ run_simulation ตัวเดิมเป๊ะๆ
                 other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
-                other_total = other_res[0] # เอาแค่ค่า Total มาเทียบ
-                
+                other_total = other_res[0]
                 diff = other_total - total_val
                 diff_text = f"+฿ {diff:,.0f}" if diff > 0 else f"-฿ {abs(diff):,.0f}"
                 diff_color = "diff-neg" if diff > 0 else "diff-pos"
                 icon = "🔺" if diff > 0 else "🔻"
-                
-                st.markdown(f"""
-                <div class="comp-container">
-                    <div>
-                        <div class="comp-title">{other_name}</div>
-                        <div class="comp-diff {diff_color}">{icon} {diff_text} vs current</div>
-                    </div>
-                    <div class="comp-val">฿ {other_total:,.0f}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div class="comp-container"><div><div class="comp-title">{other_name}</div><div class="comp-diff {diff_color}">{icon} {diff_text} vs current</div></div><div class="comp-val">฿ {other_total:,.0f}</div></div>""", unsafe_allow_html=True)
 
     st.markdown(f'<div class="grand-box"><div style="display: flex; justify-content: space-between; align-items: flex-end;"><div><div class="metric-sub">Total Patient Pay</div><div class="metric-main">฿ {total_val:,.0f}</div><div class="grand-vat">● Includes 7% VAT and {markup}% Hospital Markup</div></div><div style="text-align: right;"><div class="metric-sub">Paid Rounds (Opdivo)</div><div class="metric-main">{o_rounds:.1f} Cycles</div></div></div></div>', unsafe_allow_html=True)
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
@@ -325,23 +318,20 @@ if check_password():
             img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
             st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
 
-    # 🟢 🆕 SMART TEXT FOR LINE (NEW ADDITION)
+    # 🟢 NEW: SMART TEXT (Hidden in Expander)
     st.markdown("---")
-    st.subheader("💬 Smart Copy for LINE")
-    
-    # คำนวณค่าตัวแปรสำหรับข้อความ
-    p1_o_dose_raw = str(sel_row.get('P1_O_Dose'))
-    p1_o_mg = get_val(p1_o_dose_raw) * (weight if 'mg/kg' in p1_o_dose_raw.lower() else 1)
-    _, p1_o_vials_txt = calculate_vials(p1_o_mg, 'O', stock, (1 + markup/100))
-    
-    p1_y_dose_raw = str(sel_row.get('P1_Y_Dose', '0'))
-    p1_y_mg = get_val(p1_y_dose_raw) * (weight if 'mg/kg' in p1_y_dose_raw.lower() else 1)
-    _, p1_y_vials_txt = calculate_vials(p1_y_mg, 'Y', [50], (1 + markup/100))
-    
-    freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
-    
-    # ข้อความสรุป
-    copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind} 
+    with st.expander("💬 กดเพื่อดูข้อความสำหรับส่ง LINE", expanded=False):
+        p1_o_dose_raw = str(sel_row.get('P1_O_Dose'))
+        p1_o_mg = get_val(p1_o_dose_raw) * (weight if 'mg/kg' in p1_o_dose_raw.lower() else 1)
+        _, p1_o_vials_txt = calculate_vials(p1_o_mg, 'O', stock, (1 + markup/100))
+        
+        p1_y_dose_raw = str(sel_row.get('P1_Y_Dose', '0'))
+        p1_y_mg = get_val(p1_y_dose_raw) * (weight if 'mg/kg' in p1_y_dose_raw.lower() else 1)
+        _, p1_y_vials_txt = calculate_vials(p1_y_mg, 'Y', [50], (1 + markup/100))
+        
+        freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
+        
+        copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind}
 
 👤 น้ำหนัก: {weight} kg
 Indication: {ind}
@@ -359,7 +349,5 @@ Protocol: {reg}
 - ราคารวมทั้งคอร์ส (ประมาณ): ฿{total_val:,.0f}
 
 ✅ สิทธิประโยชน์ PAP:
-ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
-
-    st.code(copy_text, language="text")
-
+ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าจะ PD (หรือสูงสุด 2 ปี)"""
+        st.code(copy_text, language="text")
