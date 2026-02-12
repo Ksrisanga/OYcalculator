@@ -106,7 +106,7 @@ if check_password():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC
+    # 3. CORE LOGIC (FIXED PRECISION & OPTIMIZATION)
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -118,25 +118,52 @@ if check_password():
         if mg_needed <= 0: return 0.0, "-"
         # 🟢 PRICE UPDATED: Yervoy 50mg = 63,558 THB
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
+        
         options = []
         if drug_type == 'O':
-            for s in [40, 100, 120]:
-                if s in available_stock: options.append((s, prices[f'O_{s}'] * multiplier))
-        else: options.append((50, prices['Y_50'] * multiplier))
+            # Sort Descending (120 -> 100 -> 40)
+            sizes = sorted([s for s in [40, 100, 120] if s in available_stock], reverse=True)
+            for s in sizes:
+                # 🛠️ FIX: Round price to 2 decimals to prevent floating point errors
+                p = round(prices[f'O_{s}'] * multiplier, 2)
+                options.append((s, p))
+        else: 
+            p = round(prices['Y_50'] * multiplier, 2)
+            options.append((50, p))
+            
         memo = {}
         def solve(rem_mg):
-            if rem_mg <= 0: return 0, {}, 0
+            if rem_mg <= 0: return 0.0, {}, 0
             if rem_mg in memo: return memo[rem_mg]
-            best_cost, best_combo, min_vials = float('inf'), {}, float('inf')
+            
+            best_cost = float('inf')
+            best_combo = {}
+            min_vials = float('inf')
+            
             for size, price in options:
                 res_cost, res_combo, res_vials = solve(rem_mg - size)
-                current_cost, current_vials = price + res_cost, 1 + res_vials
-                if current_cost < best_cost or (current_cost == best_cost and current_vials < min_vials):
-                    best_cost, min_vials = current_cost, current_vials
+                current_cost = price + res_cost
+                current_vials = 1 + res_vials
+                
+                # 🛠️ FIX: Robust Comparison Logic
+                # 1. If Cost is significantly lower (allow 0.01 error margin)
+                if current_cost < (best_cost - 0.01):
+                    best_cost = current_cost
+                    min_vials = current_vials
                     best_combo = res_combo.copy()
                     best_combo[size] = best_combo.get(size, 0) + 1
+                
+                # 2. If Cost is EQUAL (within 0.01), choose FEWER VIALS
+                elif abs(current_cost - best_cost) <= 0.01:
+                    if current_vials < min_vials:
+                        best_cost = current_cost
+                        min_vials = current_vials
+                        best_combo = res_combo.copy()
+                        best_combo[size] = best_combo.get(size, 0) + 1
+            
             memo[rem_mg] = (best_cost, best_combo, min_vials)
             return best_cost, best_combo, min_vials
+            
         cost, combo, _ = solve(mg_needed)
         details = [f"{s}mg x {count}" for s, count in sorted(combo.items(), reverse=True)]
         return cost, ", ".join(details)
@@ -242,7 +269,6 @@ if check_password():
     with st.sidebar:
         st.markdown('<div class="app-branding"><div class="app-title-luxury">O+Y Calculator</div><div class="app-subtitle-luxury">Precision PAP Support</div></div>', unsafe_allow_html=True)
         
-        # 🔵 Try-Except for Option Menu (Fallback system)
         try:
             from streamlit_option_menu import option_menu
             sector = option_menu(
@@ -270,7 +296,6 @@ if check_password():
         reg = st.radio("Protocol", subset['Regimen_Name'])
         markup = st.slider("Hospital Markup (%)", 0, 100, 0)
         
-        # 🟢 NEW: MARKUP PREVIEW (Opdivo 100mg Reference)
         base_price = 58850 # Opdivo 100mg Base
         marked_price = base_price * (1 + markup/100)
         st.caption(f"💡 Ref (O_100): ฿{base_price:,.0f} ➡️ **฿{marked_price:,.0f}**")
@@ -318,7 +343,7 @@ if check_password():
             img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
             st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
 
-    # 🟢 NEW: SMART TEXT (Hidden in Expander)
+    # 🟢 HIDDEN SMART TEXT (Premium UI)
     st.markdown("---")
     with st.expander("💬 กดเพื่อดูข้อความสำหรับส่ง LINE", expanded=False):
         p1_o_dose_raw = str(sel_row.get('P1_O_Dose'))
@@ -333,9 +358,9 @@ if check_password():
         
         copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind}
 
-👤 น้ำหนัก: {weight} kg
+👤 Weight: {weight} kg
 Indication: {ind}
-Protocol: {reg}
+Protoal: {reg}
 
 📅 รอบการให้ยา (Cycle): ทุกๆ {freq_weeks} สัปดาห์
 
@@ -349,5 +374,5 @@ Protocol: {reg}
 - ราคารวมทั้งคอร์ส (ประมาณ): ฿{total_val:,.0f}
 
 ✅ สิทธิประโยชน์ PAP:
-ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าจะ PD (หรือสูงสุด 2 ปี)"""
+ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะ PD (หรือสูงสุด 2 ปี) ครับ"""
         st.code(copy_text, language="text")
