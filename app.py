@@ -9,6 +9,27 @@ import io
 # 1. SECURITY SYSTEM
 # ==========================================
 def check_password():
+    # --- VISITOR COUNTER LOGIC (ทำงานเบื้องหลัง) ---
+    if "visit_counted" not in st.session_state:
+        try:
+            with open("visitor_count.txt", "r") as f:
+                count = int(f.read())
+        except FileNotFoundError:
+            count = 0
+        
+        count += 1
+        with open("visitor_count.txt", "w") as f:
+            f.write(str(count))
+        
+        st.session_state["visit_counted"] = True
+        st.session_state["total_visitors"] = count
+    else:
+        try:
+            with open("visitor_count.txt", "r") as f:
+                count = int(f.read())
+        except:
+            count = st.session_state.get("total_visitors", 1)
+
     def password_entered():
         if st.session_state["password"] == "bms123": 
             st.session_state["password_correct"] = True
@@ -17,11 +38,17 @@ def check_password():
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
+        # 🎨 ORIGINAL CLEAN UI (Apple Style: Simple & Functional)
         st.markdown('<div style="margin-top:15vh; text-align:center;">', unsafe_allow_html=True)
         st.title("🔒 O+Y Calculator Pro")
         st.text_input("Enter Password to Access", type="password", on_change=password_entered, key="password")
+        
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.error("😕 รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่ครับ")
+            
+        # แสดงตัวนับแบบ Minimal (ตัวหนังสือสีเทาเล็กๆ)
+        st.caption(f"Total Access: {count:,}")
+        
         st.markdown('</div>', unsafe_allow_html=True)
         return False
     return True
@@ -408,3 +435,4 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
