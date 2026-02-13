@@ -106,7 +106,7 @@ if check_password():
     """, unsafe_allow_html=True)
 
     # ==========================================
-    # 3. CORE LOGIC (FIXED PRECISION & OPTIMIZATION)
+    # 3. CORE LOGIC
     # ==========================================
     def get_val(val):
         if pd.isna(val) or str(val).strip() in ['', '-', 'nan']: return 0.0
@@ -116,15 +116,13 @@ if check_password():
 
     def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
         if mg_needed <= 0: return 0.0, "-"
-        # 🟢 PRICE UPDATED: Yervoy 50mg = 63,558 THB
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
         
         options = []
         if drug_type == 'O':
-            # Sort Descending (120 -> 100 -> 40)
+            # Sort Descending to prioritize large vials
             sizes = sorted([s for s in [40, 100, 120] if s in available_stock], reverse=True)
             for s in sizes:
-                # 🛠️ FIX: Round price to 2 decimals to prevent floating point errors
                 p = round(prices[f'O_{s}'] * multiplier, 2)
                 options.append((s, p))
         else: 
@@ -145,15 +143,11 @@ if check_password():
                 current_cost = price + res_cost
                 current_vials = 1 + res_vials
                 
-                # 🛠️ FIX: Robust Comparison Logic
-                # 1. If Cost is significantly lower (allow 0.01 error margin)
                 if current_cost < (best_cost - 0.01):
                     best_cost = current_cost
                     min_vials = current_vials
                     best_combo = res_combo.copy()
                     best_combo[size] = best_combo.get(size, 0) + 1
-                
-                # 2. If Cost is EQUAL (within 0.01), choose FEWER VIALS
                 elif abs(current_cost - best_cost) <= 0.01:
                     if current_vials < min_vials:
                         best_cost = current_cost
@@ -168,13 +162,13 @@ if check_password():
         details = [f"{s}mg x {count}" for s, count in sorted(combo.items(), reverse=True)]
         return cost, ", ".join(details)
 
-    def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd):
+    def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd, sector):
         p1_limit, p1_o_freq = int(get_val(row.get('P1_Cycle_Limit'))), max(1, int(get_val(row.get('P1_O_Freq_Weeks', 2))))
         p1_y_freq, cap_limit = max(1, int(get_val(row.get('P1_Y_Freq_Weeks', p1_o_freq)))), int(get_val(row.get('PAP_Cap_Months', 10)))
         has_p2 = pd.notna(row.get('P2_O_Dose')) and str(row.get('P2_O_Dose', '-')).strip() not in ['', '-', '0']
         
         timeline, total_paid, curr_date, cycle, weeks = [], 0.0, start_dt, 1, 1 
-        o_admin_total, y_admin_total, o_paid_accum, p1_c, p2_c = 0, 0, 0.0, 0.0, 0.0
+        o_admin_total, y_admin_total, o_paid_accum, y_paid_accum, p1_c, p2_c = 0, 0, 0.0, 0.0, 0.0, 0.0
 
         while weeks <= 104:
             is_p1 = (cycle <= p1_limit)
@@ -184,23 +178,53 @@ if check_password():
                 if display_date.weekday() == 5: display_date += timedelta(days=2)
                 elif display_date.weekday() == 6: display_date += timedelta(days=1)
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
+            
+            # Dose Calculation
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
             y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
+            
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
             y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
+            
             o_p, y_p, status_msg = 0.0, 0.0, ""
+            
+            # --- OPDIVO LOGIC (Time Cap) ---
             if o_mg > 0 and curr_m <= cap_limit:
                 o_admin_total += 1
                 if o_admin_total % 2 != 0:
-                    o_p, status_msg = (o_cost, "") if (((weeks + freq - 1) // 4) + 1) <= cap_limit else (o_cost * 0.5, " (Pay 50%)")
+                    if (((weeks + freq - 1) // 4) + 1) <= cap_limit:
+                        o_p = o_cost
+                    else:
+                        o_p = o_cost * 0.5
+                        status_msg = " (Pay 50%)"
                     o_paid_accum += (1.0 if "50%" not in status_msg else 0.5)
+
+            # --- YERVOY LOGIC (GOV vs PRIVATE) ---
             if y_mg > 0 and curr_m <= cap_limit:
                 y_admin_total += 1
-                if y_admin_total % 2 != 0:
-                    y_p = y_cost if (((weeks + p1_y_freq - 1) // 4) + 1) <= cap_limit else y_cost * 0.5
+                should_pay_y = False
+                
+                if sector == "Government":
+                    # 🟢 GOV RULE: Pay max 2 cycles for Ipi (ALL INDICATIONS)
+                    if y_paid_accum < 2:
+                        should_pay_y = True
+                else:
+                    # 🟠 PRIVATE RULE: Standard Pay 1 Free 1
+                    if y_admin_total % 2 != 0:
+                        should_pay_y = True
+                
+                if should_pay_y:
+                    # Partial pay check at cap boundary
+                    if (((weeks + p1_y_freq - 1) // 4) + 1) <= cap_limit:
+                         y_p = y_cost
+                    else:
+                         y_p = y_cost * 0.5
+                    y_paid_accum += (1.0 if y_p == y_cost else 0.5)
+
             total_paid += (o_p + y_p)
             if is_p1 and p1_c == 0 and (o_p + y_p) > 0: p1_c = (o_p + y_p)
             if not is_p1 and p2_c == 0 and (o_p + y_p) > 0: p2_c = (o_p + y_p)
+            
             timeline.append({"Phase": f"Phase {1 if is_p1 else 2}", "Cycle": cycle, "RawDate": display_date, "Date": display_date.strftime("%d %b %Y (%a)"),"Month": curr_m, "Opdivo Vials": o_v, "Yervoy Vials": y_v if y_mg > 0 else "-", "Opdivo (฿)": o_p, "Yervoy (฿)": y_p, "Total (฿)": (o_p + y_p), "Status": f"Paid{status_msg}" if (o_p + y_p) > 0 else "Free"})
             weeks, cycle, curr_date = weeks + freq, cycle + 1, curr_date + timedelta(weeks=freq)
         
@@ -216,18 +240,23 @@ if check_password():
         fig, ax = plt.subplots(figsize=(15, height)) 
         ax.axis('off')
         
-        # Header include Sector
         header_text = (
             f"O+Y Treatment Expense Summary | Sector: {sector}\n"
             f"----------------------------------------------------------------------------------------------------\n"
             f"Indication: {ind}\n"
             f"Regimen:    {reg}\n"
             f"Weight:     {weight} kg  |  Hospital Markup: {markup}%\n"
-            f"PAP Policy: Capped at {cap_limit} months\n\n"
-            f"Cost per Cycle (Phase 1): {p1:,.0f} THB\n"
+            f"PAP Policy: Capped at {cap_limit} months\n"
+        )
+        
+        if sector == "Government":
+             header_text += f"** Government Privilege: Yervoy payment capped at 2 cycles **\n"
+             
+        header_text += (
+            f"\nCost per Cycle (Phase 1): {p1:,.0f} THB\n"
             f"Cost per Cycle (Phase 2): {p2:,.0f} THB\n"
             f"----------------------------------------------------------------------------------------------------\n"
-            f"Summary - Patient Paid Rounds: {rounds:.1f} Cycles\n"
+            f"Summary - Patient Paid Rounds: {rounds:.1f} Cycles (Opdivo)\n"
             f"Estimated Total Investment:     {total:,.0f} THB\n"
         )
         
@@ -309,7 +338,8 @@ if check_password():
 
     # --- MAIN SIMULATION ---
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
-    total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
+    # Pass 'sector' to run_simulation
+    total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector)
 
     # --- DISPLAY ---
     st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg} | Sector: {sector}</div>', unsafe_allow_html=True)
@@ -325,7 +355,7 @@ if check_password():
             st.markdown(f"**Comparing with current selection ({reg}):**")
             for _, other_row in other_regimens.iterrows():
                 other_name = other_row['Regimen_Name']
-                other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk)
+                other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector)
                 other_total = other_res[0]
                 diff = other_total - total_val
                 diff_text = f"+฿ {diff:,.0f}" if diff > 0 else f"-฿ {abs(diff):,.0f}"
@@ -356,11 +386,13 @@ if check_password():
         
         freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
         
-        copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind}
+        gov_note = " (สิทธิเบิกจ่ายตรง: ชำระ Yervoy เพียง 2 รอบ)" if sector == "Government" else ""
+        
+        copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind} 
 
 👤 Weight: {weight} kg
 Indication: {ind}
-Protoal: {reg}
+Protocol: {reg}
 
 📅 รอบการให้ยา (Cycle): ทุกๆ {freq_weeks} สัปดาห์
 
@@ -374,5 +406,5 @@ Protoal: {reg}
 - ราคารวมทั้งคอร์ส (ประมาณ): ฿{total_val:,.0f}
 
 ✅ สิทธิประโยชน์ PAP:
-ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะ PD (หรือสูงสุด 2 ปี) ครับ"""
+ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี){gov_note}"""
         st.code(copy_text, language="text")
