@@ -114,8 +114,15 @@ if check_password():
         match = re.search(r"(\d+(\.\d+)?)", s)
         return float(match.group(1)) if match else 0.0
 
-    def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0):
+    # 🟢 Modified to accept 'round_down'
+    def calculate_vials(mg_needed, drug_type, available_stock, multiplier=1.0, round_down=False):
         if mg_needed <= 0: return 0.0, "-"
+        
+        # 🟢 Rounding Logic
+        target_mg = mg_needed
+        if round_down:
+            target_mg = max(0, mg_needed - 49.9) # Allow -49.9mg deficit
+
         prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
         
         options = []
@@ -157,11 +164,12 @@ if check_password():
             memo[rem_mg] = (best_cost, best_combo, min_vials)
             return best_cost, best_combo, min_vials
             
-        cost, combo, _ = solve(mg_needed)
+        cost, combo, _ = solve(target_mg) # Use target_mg
         details = [f"{s}mg x {count}" for s, count in sorted(combo.items(), reverse=True)]
         return cost, ", ".join(details)
 
-    def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd, sector):
+    # 🟢 Modified to accept 'round_down_mode'
+    def run_simulation(row, weight, stock_o, multiplier, start_dt, skip_wknd, sector, round_down_mode=False):
         p1_limit = int(get_val(row.get('P1_Cycle_Limit')))
         p1_o_freq = max(1, int(get_val(row.get('P1_O_Freq_Weeks', 2))))
         p1_y_freq = max(1, int(get_val(row.get('P1_Y_Freq_Weeks', p1_o_freq))))
@@ -181,11 +189,11 @@ if check_password():
             curr_m, freq = ((weeks - 1) // 4) + 1, (p1_o_freq if is_p1 else max(1, int(get_val(row.get('P2_Freq_Weeks')))))
             
             o_mg = get_val(str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose'))) * (weight if 'mg/kg' in str(row.get('P1_O_Dose' if is_p1 else 'P2_O_Dose')).lower() else 1)
-            y_due = (is_p1 and (weeks - 1) % p1_y_freq == 0)
-            y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if y_due else 0.0
+            y_mg = get_val(str(row.get('P1_Y_Dose', '0'))) * (weight if 'mg/kg' in str(row.get('P1_Y_Dose')).lower() else 1) if (is_p1 and (weeks - 1) % p1_y_freq == 0) else 0.0
             
+            # 🟢 Apply Rounding to Yervoy
             o_cost, o_v = calculate_vials(o_mg, 'O', stock_o, multiplier)
-            y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier)
+            y_cost, y_v = calculate_vials(y_mg, 'Y', [50], multiplier, round_down=round_down_mode)
             
             o_p, y_p, status_msg = 0.0, 0.0, ""
             
@@ -203,7 +211,7 @@ if check_password():
                 y_admin_total += 1
                 should_pay_y = (y_admin_total % 2 != 0)
                 
-                # 🏛️ GOVERNMENT RULE: จ่ายสูงสุด 2 รอบ
+                # 🏛️ GOVERNMENT RULE
                 if str(sector).lower() == "government" and y_paid_rounds >= 2:
                     should_pay_y = False
                 
@@ -320,10 +328,20 @@ if check_password():
             start_dt = st.date_input("First Dose Date", date.today())
             skip_wk = st.checkbox("Skip Weekend Appointments", value=True)
             stock = st.multiselect("Vials in Stock", [40, 100, 120], default=[40, 100, 120])
+            
+            # 🟢 Added Vial Rounding Option
+            st.markdown("---")
+            st.markdown("**Vial Calculation Mode**")
+            round_mode = st.radio("Select Rounding Mode:", 
+                                ["Standard (Round Up)", "Economical (Round Down)"], 
+                                help="Economical: Allows rounding down Yervoy if close to lower vial count.")
+            is_round_down = (round_mode == "Economical (Round Down)")
+
         if st.button("🚪 Logout"): del st.session_state["password_correct"]; st.rerun()
 
+    # 🟢 Pass is_round_down
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
-    total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector)
+    total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector, is_round_down)
 
     st.markdown(f'<div class="ind-title">{ind}</div><div class="protocol-sub">Regimen: {reg} | Sector: {sector}</div>', unsafe_allow_html=True)
     phase_html = f'<div class="card-wrapper"><div class="phase-card p1"><div class="card-label">Phase 1 / Cycle</div><div class="card-value">฿ {p1_c:,.0f}</div><div class="card-vat">● Inclusive of 7% VAT</div></div>'
@@ -337,7 +355,8 @@ if check_password():
             st.markdown(f"**Comparing with current selection ({reg}):**")
             for _, other_row in other_regimens.iterrows():
                 other_name = other_row['Regimen_Name']
-                other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector)
+                # 🟢 Pass is_round_down to comparison
+                other_res = run_simulation(other_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector, is_round_down)
                 other_total = other_res[0]
                 diff = other_total - total_val
                 diff_text = f"+฿ {diff:,.0f}" if diff > 0 else f"-฿ {abs(diff):,.0f}"
@@ -355,7 +374,6 @@ if check_password():
             img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
             st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
 
-    # 🟢 HIDDEN SMART TEXT (Restore Strictly From Final_Version_Full.txt)
     st.markdown("---")
     with st.expander("💬 กดเพื่อดูข้อความสำหรับส่ง LINE", expanded=False):
         p1_o_dose_raw = str(sel_row.get('P1_O_Dose'))
@@ -364,7 +382,9 @@ if check_password():
         
         p1_y_dose_raw = str(sel_row.get('P1_Y_Dose', '0'))
         p1_y_mg = get_val(p1_y_dose_raw) * (weight if 'mg/kg' in p1_y_dose_raw.lower() else 1)
-        _, p1_y_vials_txt = calculate_vials(p1_y_mg, 'Y', [50], (1 + markup/100))
+        
+        # 🟢 Pass is_round_down to text generation
+        _, p1_y_vials_txt = calculate_vials(p1_y_mg, 'Y', [50], (1 + markup/100), round_down=is_round_down)
         
         freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
         
@@ -386,5 +406,5 @@ Protocol: {reg}
 - ราคารวมทั้งคอร์ส (ประมาณ): ฿{total_val:,.0f}
 
 ✅ สิทธิประโยชน์ PAP:
-ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี) """
+ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
