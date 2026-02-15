@@ -4,31 +4,46 @@ from datetime import date, timedelta
 import re
 import matplotlib.pyplot as plt
 import io
+import requests # 🟢 เพิ่มเพื่อเก็บสถิติออนไลน์ (ไม่หายเมื่อรีเซ็ต)
 
 # ==========================================
 # 1. SECURITY SYSTEM
 # ==========================================
 def check_password():
-    # --- VISITOR COUNTER LOGIC (ทำงานเบื้องหลัง) ---
+    # 🟢 1. เช็คว่าเป็น Bot มาปลุกหรือเปล่า? (ป้องกันเลขนับมั่ว)
+    # วิธีใช้: ใน UptimeRobot ให้ใส่ลิงค์เป็น .../?bot=true
+    is_wake_up_bot = "bot" in st.query_params
+
+    # 🟢 2. CLOUD COUNTER (เก็บเลขบนเน็ต เลขไม่หายแม้ App หลับ)
     if "visit_counted" not in st.session_state:
-        try:
-            with open("visitor_count.txt", "r") as f:
-                count = int(f.read())
-        except FileNotFoundError:
-            count = 0
-        
-        count += 1
-        with open("visitor_count.txt", "w") as f:
-            f.write(str(count))
-        
-        st.session_state["visit_counted"] = True
-        st.session_state["total_visitors"] = count
+        # ถ้านี่ไม่ใช่ Bot ให้ทำการนับยอด
+        if not is_wake_up_bot:
+            try:
+                # ใช้ API ฟรี เก็บสถิติแยกตามชื่อ Project 'oy_calc_pro_th'
+                url = "https://api.counterapi.dev/v1/oy_calc_pro_th/visits/up"
+                response = requests.get(url, timeout=2)
+                if response.status_code == 200:
+                    count = response.json().get("count")
+                else:
+                    count = 1 
+            except:
+                count = 1
+            
+            # บันทึกว่านับแล้ว ใน Session นี้จะได้ไม่นับซ้ำ
+            st.session_state["visit_counted"] = True
+            st.session_state["total_visitors"] = count
+        else:
+            # ถ้าเป็น Bot ให้ข้ามการนับ แต่ต้องไปดึงเลขล่าสุดมาโชว์ (แบบไม่อัพเดท)
+            try:
+                url_read = "https://api.counterapi.dev/v1/oy_calc_pro_th/visits"
+                response = requests.get(url_read, timeout=2)
+                count = response.json().get("count")
+            except:
+                count = 0
+            st.session_state["total_visitors"] = count
     else:
-        try:
-            with open("visitor_count.txt", "r") as f:
-                count = int(f.read())
-        except:
-            count = st.session_state.get("total_visitors", 1)
+        # ถ้าเคยนับใน Session นี้แล้ว ให้ดึงค่าเดิมมาใช้
+        count = st.session_state.get("total_visitors", 1)
 
     def password_entered():
         if st.session_state["password"] == "bms123": 
@@ -38,7 +53,7 @@ def check_password():
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        # 🎨 ORIGINAL CLEAN UI (Apple Style: Simple & Functional)
+        # 🎨 ORIGINAL CLEAN UI (แบบเรียบๆ ที่คุณชอบ)
         st.markdown('<div style="margin-top:15vh; text-align:center;">', unsafe_allow_html=True)
         st.title("🔒 O+Y Calculator Pro")
         st.text_input("Enter Password to Access", type="password", on_change=password_entered, key="password")
@@ -46,7 +61,7 @@ def check_password():
         if "password_correct" in st.session_state and not st.session_state["password_correct"]:
             st.error("😕 รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่ครับ")
             
-        # แสดงตัวนับแบบ Minimal (ตัวหนังสือสีเทาเล็กๆ)
+        # แสดงตัวนับแบบ Minimal
         st.caption(f"Total Access: {count:,}")
         
         st.markdown('</div>', unsafe_allow_html=True)
@@ -435,4 +450,5 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
 
