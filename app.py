@@ -308,83 +308,7 @@ if check_password():
         
         buf = io.BytesIO(); plt.savefig(buf, format='png', bbox_inches='tight', dpi=150); buf.seek(0); plt.close(fig)
         return buf
-    # ==========================================
-    # 4.2 NEW CHIC INFOGRAPHIC FUNCTION (Timeline แนวนอน)
-    # ==========================================
-    def generate_chic_infographic(ind, reg, total_val, cap_val, df):
-        # กรองเฉพาะรอบที่อยู่ในช่วงที่น่าสนใจ (Cap + 1 เดือน) เพื่อไม่ให้รูปยาวเกินไป
-        df_display = df[df['Month'] <= (cap_val + 1)].copy()
-        num_cycles = len(df_display)
-        
-        # ปรับขนาดผ้าใบตามจำนวน Cycle
-        fig, ax = plt.subplots(figsize=(15, 7))
-        fig.patch.set_facecolor('#F8F9FA')
-        ax.axis('off')
 
-        # 1. Header (Apple Style Typography)
-        ax.text(0.05, 0.93, f"{ind}", fontsize=24, weight='bold', color='#1D1D1F')
-        ax.text(0.05, 0.88, f"Protocol: {reg}", fontsize=12, color='#86868B')
-
-        # 2. วาด Timeline Blocks
-        for i, r in df_display.iterrows():
-            # คำนวณตำแหน่ง X สำหรับแต่ละ Cycle
-            x_pos = 0.05 + (i * (0.90 / num_cycles))
-            cycle_num = r['Cycle']
-            
-            # เลข Cycle ด้านบน
-            ax.text(x_pos + 0.03, 0.82, f"C{cycle_num}", ha='center', weight='bold', fontsize=11, color='#424245')
-
-            # --- ส่วนของ OPDIVO (O) ---
-            is_o_free = "Free" in str(r['Status']) or r['Opdivo (฿)'] == 0
-            o_color = '#E3F2FD' if is_o_free else '#007AFF' # สีฟ้าอ่อนถ้าฟรี สีฟ้าเข้มถ้าจ่าย
-            o_txt_color = '#007AFF' if is_o_free else 'white'
-            o_status = "FREE" if is_o_free else "PAID"
-            
-            # วาดกล่อง O
-            rect_o = plt.Rectangle((x_pos, 0.65), 0.07, 0.12, color=o_color, rx=0.01)
-            ax.add_patch(rect_o)
-            ax.text(x_pos + 0.035, 0.72, "O", ha='center', weight='bold', fontsize=14, color=o_txt_color)
-            ax.text(x_pos + 0.035, 0.67, o_status, ha='center', fontsize=8, weight='bold', color=o_txt_color)
-
-            # --- ส่วนของ YERVOY (Y) ---
-            has_y = r['Yervoy Vials'] != "-"
-            if has_y:
-                is_y_free = r['Yervoy (฿)'] == 0
-                y_color = '#FFF3E0' if is_y_free else '#FF9500' # สีส้มอ่อนถ้าฟรี สีส้มเข้มถ้าจ่าย
-                y_txt_color = '#FF9500' if is_y_free else 'white'
-                y_status = "FREE" if is_y_free else "PAID"
-                
-                # วาดกล่อง Y
-                rect_y = plt.Rectangle((x_pos, 0.50), 0.07, 0.12, color=y_color, rx=0.01)
-                ax.add_patch(rect_y)
-                ax.text(x_pos + 0.035, 0.57, "Y", ha='center', weight='bold', fontsize=14, color=y_txt_color)
-                ax.text(x_pos + 0.035, 0.52, y_status, ha='center', fontsize=8, weight='bold', color=y_txt_color)
-            else:
-                # ถ้าไม่มี Y ในรอบนั้น ให้ใส่เครื่องหมายละไว้
-                ax.text(x_pos + 0.035, 0.55, "—", ha='center', color='#D1D1D6')
-
-        # 3. สรุปยอดรวม (Summary Card)
-        from matplotlib.patches import FancyBboxPatch
-        box = FancyBboxPatch((0.05, 0.15), 0.4, 0.25, boxstyle="round,pad=0.02, clinics=0.03", 
-                             facecolor='white', edgecolor='#D1D1D6', zorder=0)
-        ax.add_patch(box)
-        ax.text(0.08, 0.32, "Estimated Total Investment", fontsize=12, color='#86868B')
-        ax.text(0.08, 0.22, f"฿ {total_val:,.0f}", fontsize=32, weight='bold', color='#1D1D1F')
-
-        # 4. PAP Policy Highlight
-        ax.text(0.55, 0.30, "🛡️ PAP PROTECTION POLICY", fontsize=10, weight='bold', color='#004080')
-        ax.text(0.55, 0.23, f"Payment capped at {cap_val} months.", fontsize=16, weight='bold', color='#004080')
-        ax.text(0.55, 0.18, "After cap, medication is supported by PAP until PD.", fontsize=10, color='#666')
-
-        # Legend คำอธิบายสี
-        legend_txt = "O = Opdivo (Nivolumab) | Y = Yervoy (Ipilimumab) | PAID = Patient Investment | FREE = PAP Support"
-        ax.text(0.5, 0.05, legend_txt, ha='center', fontsize=9, color='#AEAEB2', style='italic')
-
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
-        plt.close(fig)
-        return buf
-        
     # ==========================================
     # 5. RENDER UI
     # ==========================================
@@ -527,6 +451,7 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
 
 
 
