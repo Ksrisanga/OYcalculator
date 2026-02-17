@@ -396,26 +396,12 @@ if check_password():
     st.markdown(f'<div class="policy-box"><b>PAP Policy:</b> Payment capped at <b>{cap_val} months</b>. Medication beyond the cap is free until PD or max 2 years.</div>', unsafe_allow_html=True)
     st.dataframe(df_res.drop(columns=['RawDate']).style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
 
-        st.markdown("---")
-    st.subheader("📸 Export Treatment Plan")
-    
-    # สร้าง 2 คอลัมน์สำหรับ 2 สไตล์
-    col_img1, col_img2 = st.columns(2)
-
-    with col_img1:
-        st.info("📊 **Classic Style**\nตารางละเอียดทุกรอบการรักษา")
-        if st.button("Generate Detailed Table"):
-            with st.spinner("Creating table..."):
-                img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
-                st.download_button(label="⬇️ Download Detailed Table", data=img_buf, file_name=f"OY_Detailed_{ind}.png", mime="image/png")
-
-    with col_img2:
-        st.success("✨ **Chic Style (Timeline)**\nรูปภาพสรุปแนวนอน เข้าใจง่าย")
-        if st.button("Generate Chic Infographic"):
-            with st.spinner("Creating infographic..."):
-                # เรียกใช้ฟังก์ชันใหม่
-                chic_buf = generate_chic_infographic(ind, reg, total_val, cap_val, df_res)
-                st.download_button(label="⬇️ Download Chic Visual", data=chic_buf, file_name=f"OY_Visual_{ind}.png", mime="image/png")
+    st.markdown("---")
+    # ปุ่ม Generate แบบเดิมที่เสถียรที่สุด
+    if st.button("📸 Generate Summary Image"):
+        with st.spinner("Generating Image..."):
+            img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
+            st.download_button(label="⬇️ Download PNG Report", data=img_buf, file_name=f"OY_Plan_{sector}_{ind}.png", mime="image/png")
 
     st.markdown("---")
     with st.expander("💬 กดเพื่อดูข้อความสำหรับส่ง LINE", expanded=False):
@@ -451,6 +437,7 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
 
 
 
