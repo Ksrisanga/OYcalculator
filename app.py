@@ -345,8 +345,8 @@ if check_password():
         ind = st.selectbox("Select Indication", df['Indication_Group'].dropna().unique())
         subset = df[df['Indication_Group'] == ind]
         reg = st.radio("Protocol", subset['Regimen_Name'])
-        markup = st.slider("Hospital Markup (%)", 0, 100, 0)
-        
+        markup = st.number_input("Hospital Markup (%)", min_value=0, max_value=100, value=0, step=1)
+
         base_price = 58850
         marked_price = base_price * (1 + markup/100)
         st.caption(f"💡 Ref (O_100): ฿{base_price:,.0f} ➡️ **฿{marked_price:,.0f}**")
@@ -436,6 +436,7 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
 
 
 
