@@ -117,7 +117,7 @@ if check_password():
             box-shadow: 0 4px 12px rgba(0,0,0,0.05); font-size: 13px;
         }}
 
-        iframe[title="streamlit_option_menu.option_menu"] {{ width: % !important; }}
+        iframe[title="streamlit_option_menu.option_menu"] {{ width: 100% !important; }}
         
         .comp-container {{
             background-color: #FFFFFF; border: 1px solid #E5E5EA; border-radius: 12px; 
@@ -151,7 +151,7 @@ if check_password():
         if round_down:
             target_mg = max(0, mg_needed - 49.9) # Allow -49.9mg deficit
 
-        prices = {'O_40': 23540, 'O_': 58850, 'O_120': 70620, 'Y_50': 63558}
+        prices = {'O_40': 23540, 'O_100': 58850, 'O_120': 70620, 'Y_50': 63558}
         
         options = []
         if drug_type == 'O':
@@ -333,7 +333,7 @@ if check_password():
                 styles={
                     "container": { "padding": "0!important", "background-color": "#FFFFFF", "border": "1px solid #E5E5EA", "border-radius": "12px", "margin-bottom": "25px", "display": "grid", "grid-template-columns": "1fr 1fr" },
                     "icon": {"color": "#FF9500", "font-size": "18px"}, 
-                    "nav-link": { "font-size": "13px", "font-weight": "500", "margin":"0px", "padding": "10px", "text-align": "center", "display": "flex", "flex-direction": "column", "align-items": "center", "justify-content": "center", "height": "%" },
+                    "nav-link": { "font-size": "13px", "font-weight": "500", "margin":"0px", "padding": "10px", "text-align": "center", "display": "flex", "flex-direction": "column", "align-items": "center", "justify-content": "center", "height": "100%" },
                     "nav-link-selected": { "background-color": "#004080", "color": "white", "font-weight": "600" },
                 }
             )
@@ -345,8 +345,8 @@ if check_password():
         ind = st.selectbox("Select Indication", df['Indication_Group'].dropna().unique())
         subset = df[df['Indication_Group'] == ind]
         reg = st.radio("Protocol", subset['Regimen_Name'])
-        markup = st.number_input("Hospital Markup (%)", min_value=0, max_value=100, value=0, step=1)
-
+        markup = st.slider("Hospital Markup (%)", 0, 100, 0)
+        
         base_price = 58850
         marked_price = base_price * (1 + markup/100)
         st.caption(f"💡 Ref (O_100): ฿{base_price:,.0f} ➡️ **฿{marked_price:,.0f}**")
@@ -367,7 +367,7 @@ if check_password():
 
         if st.button("🚪 Logout"): del st.session_state["password_correct"]; st.rerun()
 
-     # 🟢 Pass is_round_down
+    # 🟢 Pass is_round_down
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
     total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector, is_round_down)
 
@@ -417,7 +417,6 @@ if check_password():
         freq_weeks = max(1, int(get_val(sel_row.get('P1_O_Freq_Weeks', 2))))
         
         copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind} 
-
 
 👤 Weight: {weight} kg
 Indication: {ind}
