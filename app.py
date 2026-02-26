@@ -155,7 +155,7 @@ if check_password():
         
         options = []
         if drug_type == 'O':
-            sizes = sorted([s for s in [40, , 120] if s in available_stock], reverse=True)
+            sizes = sorted([s for s in [40, 100, 120] if s in available_stock], reverse=True)
             for s in sizes:
                 p = round(prices[f'O_{s}'] * multiplier, 2)
                 options.append((s, p))
