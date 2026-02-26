@@ -367,7 +367,7 @@ if check_password():
 
         if st.button("🚪 Logout"): del st.session_state["password_correct"]; st.rerun()
 
-    # 🟢 Pass is_round_down
+     # 🟢 Pass is_round_down
     sel_row = subset[subset['Regimen_Name'] == reg].iloc[0]
     total_val, o_rounds, p1_c, p2_c, df_res, cap_val, has_p2_flag = run_simulation(sel_row, weight, stock, (1 + markup/100), start_dt, skip_wk, sector, is_round_down)
 
@@ -397,7 +397,6 @@ if check_password():
     st.dataframe(df_res.drop(columns=['RawDate']).style.format({"Opdivo (฿)": "{:,.0f}", "Yervoy (฿)": "{:,.0f}", "Total (฿)": "{:,.0f}"}), use_container_width=True, height=500, hide_index=True)
 
     st.markdown("---")
-    # ปุ่ม Generate แบบเดิมที่เสถียรที่สุด
     if st.button("📸 Generate Summary Image"):
         with st.spinner("Generating Image..."):
             img_buf = generate_image(ind, reg, weight, markup, sector, p1_c, p2_c, total_val, o_rounds, df_res, cap_val)
@@ -419,6 +418,7 @@ if check_password():
         
         copy_text = f"""สรุปแผนการรักษา (O+Y PAP) สำหรับคนไข้ {ind} 
 
+
 👤 Weight: {weight} kg
 Indication: {ind}
 Protocol: {reg}
@@ -437,6 +437,7 @@ Protocol: {reg}
 ✅ สิทธิประโยชน์ PAP:
 ชำระเพียง {cap_val} เดือนแรก (ประมาณ {o_rounds:.1f} รอบ) หลังจากนั้นรับยาฟรีจนกว่าโรคจะสงบ (หรือสูงสุด 2 ปี)"""
         st.code(copy_text, language="text")
+
 
 
 
